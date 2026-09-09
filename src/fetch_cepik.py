@@ -4,6 +4,7 @@ import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.ssl_ import create_urllib3_context
 
+MAX_RANGE = 8
 
 class LegacyTLSAdapter(HTTPAdapter):
     """CEPiK API uses weak DH parameters rejected by OpenSSL 3 defaults."""
@@ -22,23 +23,33 @@ session.mount("https://", LegacyTLSAdapter())
 
 def fetch_page(url):
 
-    for attempt in range(5):
+    for attempt in range(MAX_RANGE):
         answer = session.get(url)
         status = answer.status_code
         if status == 200:
-            return answer.json()
-        elif status == 429:
-            sleep_time = 2 ** attempt
-            time.sleep(sleep_time)
+            try:
+                return answer.json()
+            except ValueError:
+                time.sleep(2 ** attempt)
+                continue
+        elif status in (429, 404):
+            time.sleep(2 ** attempt)
         else:
             raise RuntimeError(f"Error {status}. URL: {url}")
 
-    raise RuntimeError(f"Error {status} after 5 attempts. URL: {url}")
+    raise RuntimeError(f"Error {status} after {MAX_RANGE} attempts. URL: {url}")
 
 
+session.headers.update({"User-Agent": "polish-fleet-pipeline/0.1"})
+url = "https://api.cepik.gov.pl/pojazdy?wojewodztwo=02&data-od=20240701&data-do=20240731&limit=200&page=1"
+page_num = 1
 
-url = "https://api.cepik.gov.pl/pojazdy?wojewodztwo=02&data-od=20240701&data-do=20240731&limit=1&page=1"
-answer = fetch_page(url)
+while url:
+    page = fetch_page(url)
+    print(f"Page {page_num} , {len(page['data'])} records")
+    url = page["links"].get("next")
+    time.sleep(2.0)
+    page_num += 1
 
-print(answer["meta"]["count"])
+
 
