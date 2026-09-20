@@ -13,6 +13,13 @@ VOIVODESHIP = "02"
 RAW_DIR = Path("data/raw")
 BASE_URL = "https://api.cepik.gov.pl/pojazdy"
 LIMIT = 200
+FIELDS = (
+    "marka,model,rodzaj-pojazdu,podrodzaj-pojazdu,pochodzenie-pojazdu,"
+    "rok-produkcji,data-pierwszej-rejestracji-w-kraju,rodzaj-paliwa,"
+    "rodzaj-pierwszego-paliwa-alternatywnego,pojemnosc-skokowa-silnika,"
+    "moc-netto-silnika,masa-wlasna,rejestracja-powiat,"
+    "wojewodztwo-kod"
+)
 
 class LegacyTLSAdapter(HTTPAdapter):
     """CEPiK API uses weak DH parameters rejected by OpenSSL 3 defaults."""
@@ -82,6 +89,7 @@ for period, date_from, date_to in month_periods(2024, 7, 24):
         f"{BASE_URL}?wojewodztwo={VOIVODESHIP}"
         f"&data-od={date_from}&data-do={date_to}"
         f"&limit={LIMIT}&page=1"
+        f"&fields={FIELDS}"
     )
     page_num = 1
 
