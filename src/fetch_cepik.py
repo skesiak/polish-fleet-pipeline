@@ -9,7 +9,6 @@ from pathlib import Path
 
 MAX_ATTEMPTS = 8
 REQUEST_DELAY = 2.0
-VOIVODESHIP = "02"
 RAW_DIR = Path("data/raw")
 BASE_URL = "https://api.cepik.gov.pl/pojazdy"
 LIMIT = 200
@@ -20,6 +19,10 @@ FIELDS = (
     "moc-netto-silnika,masa-wlasna,rejestracja-powiat,"
     "wojewodztwo-kod"
 )
+VOIVODESHIPS = [
+    "02", "04", "06", "08", "10", "12", "14", "16",
+    "18", "20", "22", "24", "26", "28", "30", "32",
+]
 
 class LegacyTLSAdapter(HTTPAdapter):
     """CEPiK API uses weak DH parameters rejected by OpenSSL 3 defaults."""
@@ -78,33 +81,32 @@ session = requests.Session()
 session.mount("https://", LegacyTLSAdapter())
 session.headers.update({"User-Agent": "polish-fleet-pipeline/0.1"})
 
-url = "https://api.cepik.gov.pl/pojazdy?wojewodztwo=02&data-od=20240701&data-do=20240731&limit=200&page=1"
-page_num = 1
 
 RAW_DIR.mkdir(parents=True, exist_ok=True)
+for voivodeship in VOIVODESHIPS:
+    print(f"=== {voivodeship} ===")
+    for period, date_from, date_to in month_periods(2024, 7, 1):
+        print(f"=== {period} ===")
+        url = (
+            f"{BASE_URL}?wojewodztwo={voivodeship}"
+            f"&data-od={date_from}&data-do={date_to}"
+            f"&limit={LIMIT}&page=1"
+            f"&fields={FIELDS}"
+        )
+        page_num = 1
 
-for period, date_from, date_to in month_periods(2024, 7, 24):
-    print(f"=== {period} ===")
-    url = (
-        f"{BASE_URL}?wojewodztwo={VOIVODESHIP}"
-        f"&data-od={date_from}&data-do={date_to}"
-        f"&limit={LIMIT}&page=1"
-        f"&fields={FIELDS}"
-    )
-    page_num = 1
+        while url:
+            path = RAW_DIR / f"pojazdy_{voivodeship}_{period}_p{page_num:04d}.json"
 
-    while url:
-        path = RAW_DIR / f"pojazdy_{VOIVODESHIP}_{period}_p{page_num:04d}.json"
+            if path.exists():
+                page = json.loads(path.read_text(encoding="utf-8"))
+                print(f"Page {page_num} - cached")
+            else:
+                page = fetch_page(url)
+                path.write_text(json.dumps(page, ensure_ascii=False), encoding="utf-8")
+                print(f"Page {page_num}, {len(page['data'])} records")
+                time.sleep(REQUEST_DELAY)
 
-        if path.exists():
-            page = json.loads(path.read_text(encoding="utf-8"))
-            print(f"Page {page_num} - cached")
-        else:
-            page = fetch_page(url)
-            path.write_text(json.dumps(page, ensure_ascii=False), encoding="utf-8")
-            print(f"Page {page_num}, {len(page['data'])} records")
-            time.sleep(REQUEST_DELAY)
-
-        url = page["links"].get("next")
-        page_num += 1
+            url = page["links"].get("next")
+            page_num += 1
 
