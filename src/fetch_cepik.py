@@ -1,4 +1,3 @@
-import ssl
 import json
 import requests
 import time
@@ -52,7 +51,9 @@ def fetch_page(url):
                 time.sleep(2 ** attempt)
                 continue
         elif status in (429, 404):
-            time.sleep(2 ** attempt)
+            wait = 2 ** attempt
+            print(f"  {status}, retry {attempt + 1}/{MAX_ATTEMPTS} in {wait}s")
+            time.sleep(wait)
         else:
             raise RuntimeError(f"Error {status}. URL: {url}")
 
@@ -85,7 +86,7 @@ session.headers.update({"User-Agent": "polish-fleet-pipeline/0.1"})
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 for voivodeship in VOIVODESHIPS:
     print(f"=== {voivodeship} ===")
-    for period, date_from, date_to in month_periods(2024, 7, 1):
+    for period, date_from, date_to in month_periods(2024, 7, 24):
         print(f"=== {period} ===")
         url = (
             f"{BASE_URL}?wojewodztwo={voivodeship}"
@@ -102,7 +103,11 @@ for voivodeship in VOIVODESHIPS:
                 page = json.loads(path.read_text(encoding="utf-8"))
                 print(f"Page {page_num} - cached")
             else:
-                page = fetch_page(url)
+                try:
+                    page = fetch_page(url)
+                except RuntimeError as e:
+                    print(f"  SKIP: {e}")
+                    break
                 path.write_text(json.dumps(page, ensure_ascii=False), encoding="utf-8")
                 print(f"Page {page_num}, {len(page['data'])} records")
                 time.sleep(REQUEST_DELAY)
