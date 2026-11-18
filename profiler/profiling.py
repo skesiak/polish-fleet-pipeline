@@ -1,7 +1,9 @@
 import csv
+import logging
+from profiler.decorators import timed
 from pathlib import Path
 
-
+@timed
 def profile_file(path: Path) -> tuple[int, dict[str, int], dict[str, set[str]]]:
     """Count rows and empty values per column in a CSV file."""
 
@@ -27,6 +29,8 @@ def profile_file(path: Path) -> tuple[int, dict[str, int], dict[str, set[str]]]:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
     rows, empty, distinct = profile_file(Path("data/samples/vehicles_02.csv"))
     print(f"{rows} rows")
     for column, count in empty.items():
