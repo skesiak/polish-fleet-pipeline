@@ -19,3 +19,15 @@ def timed(func):
         return result
 
     return wrapper
+
+
+def requires_data(method):
+    """Raise if the decorated method is called before load()."""
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if self._profile is None:
+            raise RuntimeError(f"{method.__name__}() requires load() to be called first")
+        return method(self, *args, **kwargs)
+
+    return wrapper
