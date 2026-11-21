@@ -38,4 +38,5 @@ SELECT
              - TRY_CAST(production_year AS INTEGER)
     END AS age_at_registration
 FROM raw_vehicles
-WHERE vehicle_type IN ('SAMOCHÓD OSOBOWY', 'SAMOCHÓD CIĘŻAROWY');
+WHERE vehicle_type IN ('SAMOCHÓD OSOBOWY', 'SAMOCHÓD CIĘŻAROWY')
+QUALIFY ROW_NUMBER() OVER (PARTITION BY vehicle_id ORDER BY source_file) = 1;
