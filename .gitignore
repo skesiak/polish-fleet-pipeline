@@ -11,3 +11,6 @@ data/processed/
 .DS_Store
 .env
 notes/
+data/samples/
+!data/samples/
+!data/samples/*.csv

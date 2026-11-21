@@ -31,3 +31,23 @@ def requires_data(method):
         return method(self, *args, **kwargs)
 
     return wrapper
+
+
+def benchmark(repeats: int = 3):
+    """Run the decorated function repeats times and log the best duration."""
+
+    def decorator(func):
+    
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            durations = []
+            for _ in range(repeats):
+                start = time.perf_counter()
+                result = func(*args, **kwargs)
+                durations.append(time.perf_counter() - start)
+            logger.info("%s: best %.3f s of %d runs", func.__name__, min(durations), repeats)
+            return result
+
+        return wrapper
+
+    return decorator
